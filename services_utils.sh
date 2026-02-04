@@ -106,9 +106,22 @@ get_statistics() {
 # Função para obter lista de serviços
 get_services() {
     local filter=$1
+    local search_term=$2
     local services=()
     
     case $filter in
+        "search")
+            # Buscar em todos os serviços por nome e descrição
+            while IFS= read -r line; do
+                local service=$(echo "$line" | awk '{print $1}' | sed 's/.service//')
+                local description=$(systemctl show "$service" --property=Description --value 2>/dev/null)
+                
+                # Verificar se o termo está no nome ou descrição (case insensitive)
+                if [[ "${service,,}" == *"${search_term,,}"* ]] || [[ "${description,,}" == *"${search_term,,}"* ]]; then
+                    services+=("$service")
+                fi
+            done < <(systemctl list-unit-files --type=service --no-pager --no-legend 2>/dev/null)
+            ;;
         "running")
             while IFS= read -r line; do
                 local service=$(echo "$line" | awk '{print $1}' | sed 's/.service//')
@@ -147,21 +160,72 @@ get_service_info() {
     echo "$status|$enabled"
 }
 
+# Função para buscar serviços
+search_services() {
+    show_cursor
+    clear_screen
+    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║${WHITE}${BOLD}  🔍 BUSCAR SERVIÇOS                                                        ${NC}${CYAN}║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${CYAN}Digite o termo de busca (nome ou descrição):${NC}"
+    echo ""
+    echo -n "  > "
+    
+    local search_term
+    read search_term
+    
+    # Remover espaços extras
+    search_term=$(echo "$search_term" | xargs)
+    
+    if [ -z "$search_term" ]; then
+        echo ""
+        echo -e "  ${YELLOW}Busca cancelada (termo vazio)${NC}"
+        sleep 2
+        hide_cursor
+        return
+    fi
+    
+    hide_cursor
+    
+    # Mostrar mensagem de busca
+    clear_screen
+    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║${WHITE}${BOLD}  🔍 BUSCANDO...                                                            ${NC}${CYAN}║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${YELLOW}Procurando por: ${WHITE}${BOLD}$search_term${NC}"
+    echo -e "  ${CYAN}Aguarde...${NC}"
+    
+    # Executar busca
+    select_service_menu "search" "🔍 RESULTADOS DA BUSCA: \"$search_term\"" "$search_term"
+}
+
 # Função para menu de seleção de serviços
 select_service_menu() {
     local filter=$1
     local title=$2
+    local search_term=$3
     local selected=0
     local scroll_offset=0
     local max_display=24
     
     # Obter serviços
-    readarray -t services < <(get_services "$filter")
+    if [ "$filter" == "search" ]; then
+        readarray -t services < <(get_services "$filter" "$search_term")
+    else
+        readarray -t services < <(get_services "$filter")
+    fi
+    
     local total=${#services[@]}
     
     if [ $total -eq 0 ]; then
         draw_header "$title"
-        echo -e "${YELLOW}  Nenhum serviço encontrado!${NC}"
+        if [ "$filter" == "search" ]; then
+            echo -e "${YELLOW}  Nenhum serviço encontrado com o termo: ${WHITE}${BOLD}$search_term${NC}"
+        else
+            echo -e "${YELLOW}  Nenhum serviço encontrado!${NC}"
+        fi
         echo ""
         echo -e "${YELLOW}Pressione qualquer tecla para continuar...${NC}"
         read -rsn1
@@ -172,6 +236,9 @@ select_service_menu() {
     
     while true; do
         draw_header "$title"
+        if [ "$filter" == "search" ]; then
+            echo -e "  ${CYAN}Termo buscado: ${WHITE}${BOLD}$search_term${NC}"
+        fi
         echo -e "  ${CYAN}Total de serviços: ${WHITE}$total${NC}"
         echo ""
         
@@ -208,11 +275,18 @@ select_service_menu() {
                 local enabled_icon="${YELLOW}⏹${NC}"
             fi
             
+            # Highlight do termo buscado no nome
+            local service_display="$service"
+            if [ "$filter" == "search" ] && [ -n "$search_term" ]; then
+                # Destacar o termo encontrado (case insensitive)
+                service_display=$(echo "$service" | sed -E "s/($search_term)/${YELLOW}${BOLD}\1${NC}/gi")
+            fi
+            
             # Highlight da linha selecionada
             if [ $i -eq $selected ]; then
-                echo -e "  ${WHITE}${BOLD}▶${NC} $status_icon $enabled_icon ${WHITE}${BOLD}$(printf "%-30s" "$service")${NC} $status_text"
+                echo -e "  ${WHITE}${BOLD}▶${NC} $status_icon $enabled_icon ${WHITE}${BOLD}$(printf "%-45s" "$service")${NC} $status_text"
             else
-                echo -e "    $status_icon $enabled_icon $(printf "%-30s" "$service") $status_text"
+                echo -e "    $status_icon $enabled_icon $(printf "%-45s" "$service") $status_text"
             fi
         done
         
@@ -461,6 +535,7 @@ main_menu() {
     local selected=0
     local options=(
         "📊 Estatísticas dos Serviços"
+        "🔍 Buscar Serviços"
         "● Serviços Rodando"
         "○ Serviços Parados"
         "⚡ Serviços Ativados (enabled)"
@@ -501,18 +576,21 @@ main_menu() {
                         hide_cursor
                         ;;
                     1)
-                        select_service_menu "running" "● SERVIÇOS RODANDO"
+                        search_services
                         ;;
                     2)
-                        select_service_menu "stopped" "○ SERVIÇOS PARADOS"
+                        select_service_menu "running" "● SERVIÇOS RODANDO"
                         ;;
                     3)
-                        select_service_menu "enabled" "⚡ SERVIÇOS ATIVADOS"
+                        select_service_menu "stopped" "○ SERVIÇOS PARADOS"
                         ;;
                     4)
-                        select_service_menu "disabled" "⏹ SERVIÇOS DESATIVADOS"
+                        select_service_menu "enabled" "⚡ SERVIÇOS ATIVADOS"
                         ;;
                     5)
+                        select_service_menu "disabled" "⏹ SERVIÇOS DESATIVADOS"
+                        ;;
+                    6)
                         show_cursor
                         clear
                         echo -e "${GREEN}Até logo!${NC}"
