@@ -234,67 +234,18 @@ set_timezone() {
     echo ""
     
     echo "Selecione o método:"
-    echo "1) Escolher da lista de fusos horários do Brasil"
-    echo "2) Digitar fuso horário manualmente"
-    echo "3) Buscar por região"
-    echo "4) Voltar"
+    echo "1) Digitar fuso horário manualmente"
+    echo "2) Buscar por região"
+    echo "3) Voltar"
     echo ""
     
     read -p "Escolha uma opção: " choice
     
     case $choice in
         1)
-            # Lista de fusos horários do Brasil
-            echo ""
-            echo -e "${GREEN}Fusos Horários do Brasil:${NC}"
-            echo "1) America/Noronha (UTC-2) - Fernando de Noronha"
-            echo "2) America/Belem (UTC-3) - Pará, Amapá"
-            echo "3) America/Fortaleza (UTC-3) - Nordeste"
-            echo "4) America/Recife (UTC-3) - Pernambuco"
-            echo "5) America/Araguaina (UTC-3) - Tocantins"
-            echo "6) America/Maceio (UTC-3) - Alagoas, Sergipe"
-            echo "7) America/Bahia (UTC-3) - Bahia"
-            echo "8) America/Sao_Paulo (UTC-3) - São Paulo, Rio, Sul, Sudeste"
-            echo "9) America/Campo_Grande (UTC-4) - Mato Grosso do Sul"
-            echo "10) America/Cuiaba (UTC-4) - Mato Grosso"
-            echo "11) America/Santarem (UTC-3) - Oeste do Pará"
-            echo "12) America/Porto_Velho (UTC-4) - Rondônia"
-            echo "13) America/Boa_Vista (UTC-4) - Roraima"
-            echo "14) America/Manaus (UTC-4) - Amazonas"
-            echo "15) America/Eirunepe (UTC-5) - Oeste do Amazonas"
-            echo "16) America/Rio_Branco (UTC-5) - Acre"
-            echo ""
-            
-            read -p "Escolha um fuso horário (1-16): " tz_choice
-            
-            case $tz_choice in
-                1) timezone="America/Noronha" ;;
-                2) timezone="America/Belem" ;;
-                3) timezone="America/Fortaleza" ;;
-                4) timezone="America/Recife" ;;
-                5) timezone="America/Araguaina" ;;
-                6) timezone="America/Maceio" ;;
-                7) timezone="America/Bahia" ;;
-                8) timezone="America/Sao_Paulo" ;;
-                9) timezone="America/Campo_Grande" ;;
-                10) timezone="America/Cuiaba" ;;
-                11) timezone="America/Santarem" ;;
-                12) timezone="America/Porto_Velho" ;;
-                13) timezone="America/Boa_Vista" ;;
-                14) timezone="America/Manaus" ;;
-                15) timezone="America/Eirunepe" ;;
-                16) timezone="America/Rio_Branco" ;;
-                *)
-                    echo -e "${RED}Opção inválida!${NC}"
-                    pause
-                    return
-                    ;;
-            esac
-            ;;
-        2)
             read -p "Digite o fuso horário (ex: America/Sao_Paulo): " timezone
             ;;
-        3)
+        2)
             read -p "Digite a região para buscar (ex: America): " region
             echo ""
             echo -e "${GREEN}Fusos horários disponíveis:${NC}"
@@ -302,7 +253,7 @@ set_timezone() {
             echo ""
             read -p "Digite o fuso horário completo: " timezone
             ;;
-        4)
+        3)
             return
             ;;
         *)
