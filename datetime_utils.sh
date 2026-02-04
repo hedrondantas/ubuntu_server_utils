@@ -38,6 +38,10 @@ show_header() {
     echo -e "${CYAN}║     GERENCIADOR DE DATA E HORA - Ubuntu Server            ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
     echo ""
+
+    # exibe data e hora atual
+    echo -e "${YELLOW}Data e Hora Atual: $(date)${NC}"
+    echo ""
 }
 
 # Função para verificar status do sistema
