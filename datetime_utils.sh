@@ -82,13 +82,11 @@ set_date() {
     echo -e "${YELLOW}Data atual: $(date +%Y-%m-%d)${NC}"
     echo ""
     
-    read -p "Digite o ANO (ex: 2024): " year
-    read -p "Digite o MÊS (01-12): " month
-    read -p "Digite o DIA (01-31): " day
+    read -p "Digite a data (AAAA-MM-DD): " date_string
     
     # Validação básica
-    if [[ ! "$year" =~ ^[0-9]{4}$ ]] || [[ ! "$month" =~ ^(0[1-9]|1[0-2])$ ]] || [[ ! "$day" =~ ^(0[1-9]|[12][0-9]|3[01])$ ]]; then
-        echo -e "${RED}Data inválida! Use o formato correto.${NC}"
+    if [[ ! "$date_string" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        echo -e "${RED}Data inválida! Use o formato correto (AAAA-MM-DD).${NC}"
         pause
         return
     fi
@@ -102,7 +100,6 @@ set_date() {
     fi
     
     # Ajustar data
-    date_string="${year}-${month}-${day}"
     if timedatectl set-time "$date_string" 2>/dev/null; then
         echo -e "${GREEN}✓ Data ajustada com sucesso para: $date_string${NC}"
     else
