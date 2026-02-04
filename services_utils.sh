@@ -109,12 +109,6 @@ get_services() {
     local services=()
     
     case $filter in
-        "all")
-            while IFS= read -r line; do
-                local service=$(echo "$line" | awk '{print $1}' | sed 's/.service//')
-                services+=("$service")
-            done < <(systemctl list-unit-files --type=service --no-pager --no-legend 2>/dev/null | head -200)
-            ;;
         "running")
             while IFS= read -r line; do
                 local service=$(echo "$line" | awk '{print $1}' | sed 's/.service//')
@@ -125,19 +119,19 @@ get_services() {
             while IFS= read -r line; do
                 local service=$(echo "$line" | awk '{print $1}' | sed 's/.service//')
                 services+=("$service")
-            done < <(systemctl list-units --type=service --state=dead --no-pager --no-legend 2>/dev/null | head -100)
+            done < <(systemctl list-units --type=service --state=dead --no-pager --no-legend 2>/dev/null | head -200)
             ;;
         "enabled")
             while IFS= read -r line; do
                 local service=$(echo "$line" | awk '{print $1}' | sed 's/.service//')
                 services+=("$service")
-            done < <(systemctl list-unit-files --type=service --state=enabled --no-pager --no-legend 2>/dev/null | head -200)
+            done < <(systemctl list-unit-files --type=service --state=enabled --no-pager --no-legend 2>/dev/null | head -300)
             ;;
         "disabled")
             while IFS= read -r line; do
                 local service=$(echo "$line" | awk '{print $1}' | sed 's/.service//')
                 services+=("$service")
-            done < <(systemctl list-unit-files --type=service --state=disabled --no-pager --no-legend 2>/dev/null | head -200)
+            done < <(systemctl list-unit-files --type=service --state=disabled --no-pager --no-legend 2>/dev/null | head -300)
             ;;
     esac
     
@@ -159,7 +153,7 @@ select_service_menu() {
     local title=$2
     local selected=0
     local scroll_offset=0
-    local max_display=15
+    local max_display=24
     
     # Obter serviços
     readarray -t services < <(get_services "$filter")
@@ -224,10 +218,10 @@ select_service_menu() {
         
         # Indicador de scroll
         if [ $scroll_offset -gt 0 ]; then
-            echo -e "\n  ${CYAN}↑ Mais serviços acima...${NC}"
+            echo -e "\n  ${CYAN}↑ Mais serviços acima... (${scroll_offset} ocultos)${NC}"
         fi
         if [ $end -lt $total ]; then
-            echo -e "  ${CYAN}↓ Mais serviços abaixo...${NC}"
+            echo -e "  ${CYAN}↓ Mais serviços abaixo... ($((total - end)) restantes)${NC}"
         fi
         
         draw_footer
@@ -349,10 +343,21 @@ service_control_menu() {
                 ;;
             "enter")
                 local action="${options[$selected]}"
+                
+                # Se a ação for "Voltar", sair do menu
+                if [ "$action" == "Voltar" ]; then
+                    show_cursor
+                    return
+                fi
+                
                 show_cursor
                 execute_action "$service" "$action"
                 hide_cursor
-                selected=0
+                
+                # Resetar seleção após executar ação (exceto atualizar)
+                if [ "$action" != "Atualizar Status" ]; then
+                    selected=0
+                fi
                 ;;
             "esc")
                 show_cursor
@@ -444,9 +449,6 @@ execute_action() {
         "Atualizar Status")
             return
             ;;
-        "Voltar")
-            return
-            ;;
     esac
     
     echo ""
@@ -459,7 +461,6 @@ main_menu() {
     local selected=0
     local options=(
         "📊 Estatísticas dos Serviços"
-        "📋 Todos os Serviços"
         "● Serviços Rodando"
         "○ Serviços Parados"
         "⚡ Serviços Ativados (enabled)"
@@ -500,21 +501,18 @@ main_menu() {
                         hide_cursor
                         ;;
                     1)
-                        select_service_menu "all" "📋 TODOS OS SERVIÇOS"
-                        ;;
-                    2)
                         select_service_menu "running" "● SERVIÇOS RODANDO"
                         ;;
-                    3)
+                    2)
                         select_service_menu "stopped" "○ SERVIÇOS PARADOS"
                         ;;
-                    4)
+                    3)
                         select_service_menu "enabled" "⚡ SERVIÇOS ATIVADOS"
                         ;;
-                    5)
+                    4)
                         select_service_menu "disabled" "⏹ SERVIÇOS DESATIVADOS"
                         ;;
-                    6)
+                    5)
                         show_cursor
                         clear
                         echo -e "${GREEN}Até logo!${NC}"
